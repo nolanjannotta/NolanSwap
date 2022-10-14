@@ -20,6 +20,7 @@ contract NolanSwap is ERC20 {
 
 
     constructor(address _tokenA, address _tokenB, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
+        require(_tokenA != address(0) && _tokenB != address(0));
         tokenA = _tokenA;
         tokenB = _tokenB;
     }
@@ -72,19 +73,28 @@ contract NolanSwap is ERC20 {
 
     }
 
-    function swapExactAmountOut(uint amountOut, address tokenOut) public {        
+    function swapExactAmountOut(uint amountOut, address tokenOut) public { 
+        require(tokenOut == tokenA || tokenOut == tokenB);       
         (address tokenIn, uint amountIn) = getTokenAndAmountIn(tokenOut, amountOut);
         require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn));
+        tokenToInternalBalance[tokenIn] += amountIn;
         require(IERC20(tokenOut).transfer( msg.sender, amountOut));
+        tokenToInternalBalance[tokenOut] -= amountOut;
+        
 
 
     }
 
 
     function swapExactAmountIn(uint amountIn, address tokenIn) public {
+        require(tokenIn == tokenA || tokenIn == tokenB);
         (address tokenOut, uint amountOut) = getTokenAndAmountOut(tokenIn, amountIn);
         require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn));
+        tokenToInternalBalance[tokenIn] += amountIn;
+
         require(IERC20(tokenOut).transfer(msg.sender, amountOut));
+        tokenToInternalBalance[tokenOut] -= amountOut;
+
     }
 
 }

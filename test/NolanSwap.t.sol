@@ -72,6 +72,7 @@ contract NolanSwapTest is Test {
         uint stanleyBalance = stanleyNickels.balanceOf(address(this));
         uint schruteBalance = schruteBucks.balanceOf(address(this));
         console.log(stanleyBalance,schruteBalance);
+        console.log(nolanSwap.totalLiquidity());
 
         // get the amountIn of other token required for an amountOut of other token
         // for approvals
@@ -84,6 +85,7 @@ contract NolanSwapTest is Test {
         stanleyBalance = stanleyNickels.balanceOf(address(this));
         schruteBalance = schruteBucks.balanceOf(address(this));
         console.log(stanleyBalance,schruteBalance);
+        console.log(nolanSwap.totalLiquidity());
 
     }
 

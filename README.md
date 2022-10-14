@@ -6,3 +6,16 @@ Goal: learn as much as I can about the math and architecture behind a constant p
 Goal: eventually approach Uniswap V2 level of sophistication.
 
 Goal: Write tests as I go.
+
+
+features: 
+ERC20 to ERC20 pools
+ERC20 to eth pools
+pool factory
+multi hop trades
+price oracles
+max slippage set
+
+
+
+
