@@ -18,14 +18,14 @@ contract NolanSwapTest is Test {
        schruteBucks = new MockERC20("Schrute Bucks", "SCHRUTE");
        stanleyNickels = new MockERC20("Stanley Nickels", "STANLEY");
        nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
-       schruteBucks.approve(address(nolanSwap), 10_000 ether);
-       stanleyNickels.approve(address(nolanSwap), 10_000 ether);
+       schruteBucks.approve(address(nolanSwap), 90_000 ether);
+       stanleyNickels.approve(address(nolanSwap), 90_000 ether);
 
     }
 
     function testMocks() public {
-        assertEq(schruteBucks.balanceOf(address(this)), 10_000 ether);
-        assertEq(stanleyNickels.balanceOf(address(this)), 10_000 ether);
+        assertEq(schruteBucks.balanceOf(address(this)), 100_000 ether);
+        assertEq(stanleyNickels.balanceOf(address(this)), 100_000 ether);
     }
 
     function testTokens() public {
@@ -65,13 +65,25 @@ contract NolanSwapTest is Test {
         // lets swap x amount of schruteBucks for 1000 stanleyNickels
         // tokenA = schruteBucks
         // tokenB = stanleyNickels
-        nolanSwap.initializePool(1000 ether, 5000 ether);        
-        uint StanleyBalanceBefore = stanleyNickels.balanceOf(address(this));
-        uint SchruteBalanceBefore = schruteBucks.balanceOf(address(this));
-        console.log(StanleyBalanceBefore,SchruteBalanceBefore);
+
+        // initialize pool
+        nolanSwap.initializePool(90000 ether, 90000 ether);    
+        // get the balance of this each token for this contract before the swap    
+        uint stanleyBalance = stanleyNickels.balanceOf(address(this));
+        uint schruteBalance = schruteBucks.balanceOf(address(this));
+        console.log(stanleyBalance,schruteBalance);
+
+        // get the amountIn of other token required for an amountOut of other token
+        // for approvals
         (,uint amountIn) = nolanSwap.getTokenAndAmountIn(address(stanleyNickels), 100 ether);
         schruteBucks.approve(address(nolanSwap), amountIn);
+        // swap
         nolanSwap.swapExactAmountOut(100 ether, nolanSwap.tokenB());
+
+        // get and logs balance after
+        stanleyBalance = stanleyNickels.balanceOf(address(this));
+        schruteBalance = schruteBucks.balanceOf(address(this));
+        console.log(stanleyBalance,schruteBalance);
 
     }
 
