@@ -12,4 +12,8 @@ contract MockERC20 is ERC20 {
         _mint(msg.sender, 2000 ether);
     }
 
+    function mint(uint amount) public {
+        _mint(msg.sender, amount);
+    }
+
 }

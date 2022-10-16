@@ -23,7 +23,7 @@ contract NolanSwap is ERC20 {
 
     event PoolInitialized();
     event Swap();
-    event IncreaseLiquidity();
+    event IncreaseLiquidity(uint mint, uint amount, uint otherAmount);
     event DecreaseLiquidity();
 
 
@@ -61,26 +61,37 @@ contract NolanSwap is ERC20 {
 
 
     }
+
+    function getBalances() public returns(uint balanceA, uint balanceB) {
+        balanceA = tokenToInternalBalance[tokenA];
+        balanceB = tokenToInternalBalance[tokenB];
+
+    }
     
     // create public function returning amount of other token to add, for frontend
 
+    function getLiquidityAmount(address token, uint amount) public view returns(address otherToken, uint otherAmount) {
+        otherToken = getOtherToken(token);
+        uint ratio = tokenToInternalBalance[otherToken].mulDiv(1 ether, tokenToInternalBalance[token]);
+        otherAmount = (amount * ratio) / 1 ether;
+    }
+
     function addLiquidity(address token, uint amount) public {
-        address otherToken = getOtherToken(token);
-        uint ratio = tokenToInternalBalance[otherToken] / tokenToInternalBalance[token];
-        uint otherAmount = amount * ratio;
+        (address otherToken, uint otherAmount) = getLiquidityAmount(token,amount);
 
         IERC20Metadata(token).safeTransferFrom(msg.sender, address(this), amount);
         IERC20Metadata(otherToken).safeTransferFrom(msg.sender, address(this), otherAmount);
-        uint mint = ((otherAmount * amount).sqrt() / totalLiquidity()) * totalSupply();
+
+        uint mint = ((otherAmount * amount).sqrt() * totalSupply()) / totalLiquidity();
         _mint(msg.sender,mint);
         tokenToInternalBalance[otherToken] += otherAmount;
         tokenToInternalBalance[token] += amount;
-        emit IncreaseLiquidity();
+        emit IncreaseLiquidity(mint, amount, otherAmount);
     }
 
     function removeLiquidity(uint amount) public {
-        uint tokenAAmount = tokenToInternalBalance[tokenA] * (amount / totalSupply());
-        uint tokenBAmount = tokenToInternalBalance[tokenB] * (amount / totalSupply());
+        uint tokenAAmount = (tokenToInternalBalance[tokenA] * totalSupply()) / amount;
+        uint tokenBAmount = (tokenToInternalBalance[tokenB] * totalSupply()) / amount;
 
         _burn(msg.sender, amount);
         IERC20(tokenA).transfer(msg.sender, tokenAAmount);
