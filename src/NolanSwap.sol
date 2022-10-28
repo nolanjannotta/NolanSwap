@@ -3,23 +3,24 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "solmate/utils/FixedPointMathLib.sol";
 import "prb-math/PRBMath.sol";
+// import "https://github.com/paulrberg/prb-math/blob/main/contracts/PRBMath.sol";
+import "./ERC20Initializeable.sol";
 
 
 
-contract NolanSwap is ERC20 {
+contract NolanSwap is ERC20Initializeable {
     using SafeERC20 for IERC20Metadata;
     using PRBMath for uint;
 
-    address immutable public tokenA;
-    address immutable public tokenB;
+    address public tokenA;
+    address public tokenB;
 
     mapping(address => uint) public tokenToInternalBalance;
 
-    bool initialized;
+    bool public initialized;
 
     event PoolInitialized();
     event Swap();
@@ -31,12 +32,14 @@ contract NolanSwap is ERC20 {
     error AlreadyInitialized();
 
 
-    constructor(address _tokenA, address _tokenB, string memory _name, string memory _symbol) 
+
+    function initialize(address _tokenA, address _tokenB) public {
+        
     
-        ERC20(
+        _initialize(
             string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP_Tokens")), 
-            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP"))
-            ) {
+            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP")));
+
         require(_tokenA != address(0) && _tokenB != address(0));
         // set tokenA and tokenB on deploy
         tokenA = _tokenA;
@@ -62,7 +65,7 @@ contract NolanSwap is ERC20 {
 
     }
 
-    function getBalances() public returns(uint balanceA, uint balanceB) {
+    function getBalances() public view returns(uint balanceA, uint balanceB) {
         balanceA = tokenToInternalBalance[tokenA];
         balanceB = tokenToInternalBalance[tokenB];
 
@@ -90,12 +93,14 @@ contract NolanSwap is ERC20 {
     }
 
     function removeLiquidity(uint amount) public {
-        uint tokenAAmount = (tokenToInternalBalance[tokenA] * totalSupply()) / amount;
-        uint tokenBAmount = (tokenToInternalBalance[tokenB] * totalSupply()) / amount;
+        uint tokenAAmount = (tokenToInternalBalance[tokenA] * amount) / totalSupply();
+        uint tokenBAmount = (tokenToInternalBalance[tokenB] * amount) / totalSupply();
 
         _burn(msg.sender, amount);
         IERC20(tokenA).transfer(msg.sender, tokenAAmount);
         IERC20(tokenB).transfer(msg.sender, tokenBAmount);
+        tokenToInternalBalance[tokenA] -= tokenAAmount;
+        tokenToInternalBalance[tokenB] -= tokenBAmount;
         emit DecreaseLiquidity();
     }
 
@@ -129,7 +134,7 @@ contract NolanSwap is ERC20 {
         uint den = tokenToInternalBalance[tokenIn] + amountIn;
         
         // amountOut = tokenToInternalBalance[tokenOut].mulDiv(amountIn,den);
-        amountOut = num /den;
+        amountOut = num / den;
 
     }
 

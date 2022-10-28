@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "../src/NolanSwap.sol";
 import "../src/MockERC20.sol";
+import "../src/PoolFactory.sol"; 
 import "forge-std/console.sol";
 
 
@@ -13,13 +14,18 @@ contract NolanSwapTest is Test {
     NolanSwap public nolanSwap;
     MockERC20 public schruteBucks;
     MockERC20 public stanleyNickels;
+    PoolFactory public poolFactory;
 
     function setUp() public {
-       schruteBucks = new MockERC20("Schrute Bucks", "SCHRUTE");
-       stanleyNickels = new MockERC20("Stanley Nickels", "STANLEY");
-       nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
-       schruteBucks.approve(address(nolanSwap), 2000 ether);
-       stanleyNickels.approve(address(nolanSwap), 2000 ether);
+        schruteBucks = new MockERC20("Schrute Bucks", "SCHRUTE");
+        stanleyNickels = new MockERC20("Stanley Nickels", "STANLEY");
+        poolFactory = new PoolFactory();
+        poolFactory.createPair(address(schruteBucks), address(stanleyNickels));
+
+        nolanSwap = NolanSwap(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
+        // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
+        schruteBucks.approve(address(nolanSwap), 2000 ether);
+        stanleyNickels.approve(address(nolanSwap), 2000 ether);
 
     }
 
