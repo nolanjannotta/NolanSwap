@@ -3,15 +3,13 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "prb-math/PRBMath.sol";
-// import "https://github.com/paulrberg/prb-math/blob/main/contracts/PRBMath.sol";
 import "./ERC20Initializeable.sol";
 
 
 
-contract NolanSwap is ERC20Initializeable {
+contract NSPool is ERC20Initializeable {
     using SafeERC20 for IERC20Metadata;
     using PRBMath for uint;
 
@@ -21,6 +19,12 @@ contract NolanSwap is ERC20Initializeable {
     mapping(address => uint) public tokenToInternalBalance;
 
     bool public initialized;
+
+    modifier onlyPair(address token) {
+        require(token == tokenA || token == tokenB);
+        _;
+
+    }
 
     event PoolInitialized();
     event Swap();
@@ -126,6 +130,14 @@ contract NolanSwap is ERC20Initializeable {
         amountIn = num / den;
 
     }
+    function _swap(address tokenIn, address tokenOut, uint amountIn, uint amountOut) private {
+        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        tokenToInternalBalance[tokenIn] += amountIn;
+
+        IERC20Metadata(tokenOut).safeTransfer(msg.sender, amountOut);
+        tokenToInternalBalance[tokenOut] -= amountOut;
+        emit Swap();
+    }
 
     // dy = (Y*dx) / (X + dx)
     function getTokenAndAmountOut(address tokenIn, uint amountIn) public view returns(address tokenOut, uint amountOut) {
@@ -138,28 +150,40 @@ contract NolanSwap is ERC20Initializeable {
 
     }
 
-    function swapExactAmountOut(uint amountOut, address tokenOut) public { 
-        require(tokenOut == address(tokenA) || tokenOut == address(tokenB));       
+    function swapExactAmountOut(uint amountOut, address tokenOut) public onlyPair(tokenOut) returns(uint) { 
         (address tokenIn, uint amountIn) = getTokenAndAmountIn(tokenOut, amountOut);
-        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        tokenToInternalBalance[tokenIn] += amountIn;
-        IERC20Metadata(tokenOut).safeTransfer( msg.sender, amountOut);
-        tokenToInternalBalance[tokenOut] -= amountOut;
-        emit Swap();
-
+        _swap(tokenIn, tokenOut,amountIn,amountOut);
+        return amountIn;
 
     }
 
 
-    function swapExactAmountIn(uint amountIn, address tokenIn) public {
-        require(tokenIn == tokenA || tokenIn == tokenB);
+
+
+    function swapExactAmountIn(uint amountIn, address tokenIn) public onlyPair(tokenIn) returns (uint){
         (address tokenOut, uint amountOut) = getTokenAndAmountOut(tokenIn, amountIn);
-        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        tokenToInternalBalance[tokenIn] += amountIn;
-
-        IERC20Metadata(tokenOut).safeTransfer(msg.sender, amountOut);
-        tokenToInternalBalance[tokenOut] -= amountOut;
-        emit Swap();
+        _swap(tokenIn, tokenOut,amountIn,amountOut);
+        return amountOut;
     }
+
+    // these functions protect users from bad slippage
+
+    // protects users from sending more than expected for receiving `amountOut` tokens
+    function swapExactOutWithSlippageProtection(uint targetAmountIn, uint amountOut, address tokenOut, uint maxBadSlippagePercent) public {
+        (address tokenIn, uint amountIn) = getTokenAndAmountIn(tokenOut, amountOut);
+        uint highestAmountIn = targetAmountIn + ((targetAmountIn * maxBadSlippagePercent) / 100);
+        require(amountIn <= highestAmountIn,"bad price");
+        _swap(tokenIn, tokenOut,amountIn,amountOut);        
+    }
+    // protects users from receiving less than expected for `amountIn` tokens
+    function swapExactInWithSlippageProtection(uint targetAmountOut, uint amountIn,  address tokenIn, uint maxBadSlippagePercent) public {
+        (address tokenOut, uint amountOut) = getTokenAndAmountOut(tokenIn, amountIn);
+        uint lowestAmountOut = targetAmountOut - ((targetAmountOut * maxBadSlippagePercent) / 100);
+        require(amountOut >= lowestAmountOut, "bad price");
+        _swap(tokenIn, tokenOut,amountIn,amountOut);
+        
+    }
+
+
 
 }
