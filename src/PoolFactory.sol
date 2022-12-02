@@ -31,16 +31,13 @@ contract PoolFactory is Ownable {
         return pool;
 
     }
-    // function createPair(address tokenA, address tokenB) public returns(address) {
-    //     require(tokenA != tokenB);
-    //     require(tokenToTokenToPool[tokenA][tokenB] == address(0));
-        
-    //     address pool = new NSPool_constructor(tokenA, tokenB);
-    //     tokenToTokenToPool[tokenA][tokenB] = pool;
-    //     tokenToTokenToPool[tokenB][tokenA] = pool;
-    //     return pool;
+    
+    function setFee(address pool, uint newFee) public onlyOwner {
+        NSPool(pool).setFee(newFee);
+    }
 
-    // }
+    // TODO: create function to deploy pools normally without create2
+
 
 
 

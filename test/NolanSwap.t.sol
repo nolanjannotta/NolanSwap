@@ -50,7 +50,8 @@ contract NolanSwapTest is Test {
 
     }
 
-    function initializeAllPools() internal {
+    function testOwner() public {
+        assertEq(address(this), poolFactory.owner());
 
     }
 
@@ -315,11 +316,22 @@ contract NolanSwapTest is Test {
 
     }
 
+    function testNonOwnerSetFee() public {
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(bytes('Ownable: caller is not the owner'));
+        poolFactory.setFee(address(newTokenA_newTokenB), 0);
+
+        // call setFee directly on pool contract
+        vm.expectRevert(bytes('Ownable: caller is not the owner'));
+        newTokenA_newTokenB.setFee(0);
+
+    }
+
     function testSwapWithFees() public {
         // setting up two pools with the same reserves, one with fees turned off
         schrute_Stanley.initializePool(1000 ether, 100 ether);
         newTokenA_newTokenB.initializePool(1000 ether, 100 ether);
-        newTokenA_newTokenB.setFee(0);
+        poolFactory.setFee(address(newTokenA_newTokenB), 0);
 
         (, uint stanleyOut) = schrute_Stanley.getTokenAndAmountIn(address(schruteBucks), 50 ether);
         (, uint newTokenBOut) = newTokenA_newTokenB.getTokenAndAmountIn(address(newTokenA), 50 ether);

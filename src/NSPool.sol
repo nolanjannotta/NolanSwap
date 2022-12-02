@@ -21,7 +21,7 @@ contract NSPool is ERC20Initializeable {
     address public owner;
     mapping(address => uint) public tokenToInternalBalance;
 
-    uint fee = 30; // basis points. so .3%
+    uint fee = 3; // represents .3%
 
     bool public initialized;
 
@@ -76,6 +76,7 @@ contract NSPool is ERC20Initializeable {
     }
 
     function setFee(uint newFee) public {
+        require(msg.sender == owner, "Only Owner");
         fee = newFee;
 
     }
@@ -136,50 +137,32 @@ contract NSPool is ERC20Initializeable {
     // dx = (X*dy) / (Y - dy)
     function getTokenAndAmountIn(address tokenOut, uint amountOut) public view returns (address tokenIn, uint amountIn) {
         tokenIn = getOtherToken(tokenOut);
-        
-        // another option:
-        // amountIn = tokenToInternalBalance[tokenIn].mulDivUp(amountOut, tokenToInternalBalance[tokenOut] - amountOut);
-
         uint num = tokenToInternalBalance[tokenIn] * amountOut;
         uint den = tokenToInternalBalance[tokenOut] - amountOut;
-
         amountIn = num / den;
         // add fees:
         // since were providing the exact amount we want to receive, 
         // we need add the fee to the amount we need to send
-        amountIn = amountIn + ((amountIn * fee) / 10_000);
+        amountIn = amountIn * (1000 + fee) / 1000;
 
     }
         // dy = (Y*dx) / (X + dx)
     function getTokenAndAmountOut(address tokenIn, uint amountIn) public view returns(address tokenOut, uint amountOut) {
         tokenOut = getOtherToken(tokenIn); 
-
-        // another option:
-        // amountOut = tokenToInternalBalance[tokenOut].mulDivUp(amountIn, tokenToInternalBalance[tokenIn] + amountIn);
         uint num = tokenToInternalBalance[tokenOut] * amountIn;
-        uint den = tokenToInternalBalance[tokenIn] + amountIn;
-        
+        uint den = tokenToInternalBalance[tokenIn] + amountIn;        
         amountOut = num / den;
         // add fees:
         // since were specifying the exact amount we want to send,
         // we need to subtract the fee from the amount out, so we receive lightly less
-        amountOut = amountOut - ((amountOut * fee) / 10_000); // subtracts .3 percent
+        amountOut = amountOut * (1000 - fee) / 1000; // subtracts .3 percent
 
     }
 
-
-    // amountIn = 50 amountOut = 10 fee = .3% 
-    // after amountIn = 49.85 afterAmountOut = 9.97
     function _swap(address tokenIn, address tokenOut, uint amountIn, uint amountOut) private {
-
-        
-        
-
         IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);        
         tokenToInternalBalance[tokenIn] += amountIn;
         tokenToInternalBalance[tokenOut] -= amountOut;
-        // amountIn = amountIn - ((amountIn * fee) / 10_000);
-        // amountOut = amountOut - ((amountOut * fee) / 10_000);
         IERC20Metadata(tokenOut).safeTransfer(msg.sender, amountOut);
         
         emit Swap();
