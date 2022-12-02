@@ -29,17 +29,45 @@ contract NSRouter {
     struct exactMultiHopParams {
         uint amountInOrOut;
         address[] tokenPath;
-        bool slippageProtecortion;
+        bool slippageProtection;
         uint targetAmountInOrOut;
         uint maxSlippagePercent;
 
     }
 
+    // bad slippage protected swaps:
+    // come back to this
+
+    // function swapExactOut_slippage(address tokenIn, address tokenOut, uint amountOut) public returns(uint) {
+    //     INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
+    //     pool.swapExactAmountOut(amountOut, tokenOut);
+    // }
+
+    // function swapExactIn_slippage(address tokenIn, address tokenOut, uint amountIn) public returns(uint) {
+    //     INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
+    //     pool.swapExactAmountIn(amountIn, tokenIn);
+    // }
+
+
+
+
+    function swapExactOut(address tokenIn, address tokenOut, uint amountOut) public returns(uint) {
+        INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
+        pool.swapExactAmountOut(amountOut, tokenOut);
+    }
+
+    function swapExactIn(address tokenIn, address tokenOut, uint amountIn) public returns(uint) {
+        INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
+        pool.swapExactAmountIn(amountIn, tokenIn);
+    }
+
+
+
     function swapExactInMultiHop(address[] memory tokenPath, uint amountIn) public returns(uint) {
         uint hops = tokenPath.length;
         IERC20Metadata(tokenPath[0]).safeTransferFrom(msg.sender, address(this), amountIn);
         // uint newAmountIn;
-        for(uint i=0; i<hops -1; i++) {
+        for(uint i=0; i<hops-1; i++) {
             address pool = factory.getPool(tokenPath[i], tokenPath[i+1]);
             // custom error so you can know what tokens reverted
             if (pool == address(0)) revert PoolNotFound(tokenPath[i], tokenPath[i+1]);
@@ -51,6 +79,21 @@ contract NSRouter {
         IERC20Metadata(tokenPath[hops-1]).safeTransfer(msg.sender, amountIn);
     // again, amountIn is actually the amountOut of the last swap
         return amountIn;
+    }
+
+    function swapExactOutMultiHop(address[] memory tokenPath, uint swapAmount) public returns(uint) {
+        uint hops = tokenPath.length;  
+        // uint amountIn = amountOut;
+
+        for(uint i=hops-1; i>0; i--) {
+            // were iterating backwords through the hops until we get the amount of input needed in the first swap
+            // to give us our requested amount out in the last swap
+            address pool = factory.getPool(tokenPath[i], tokenPath[i-1]);
+            // were reusing swapAmount here because 
+            (,swapAmount) = INSPool(pool).getTokenAndAmountIn(tokenPath[i],swapAmount);
+        }
+        swapExactInMultiHop(tokenPath, swapAmount);
+        return swapAmount;
     }
 
 }

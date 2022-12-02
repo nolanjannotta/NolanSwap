@@ -6,17 +6,22 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "prb-math/PRBMath.sol";
 import "./ERC20Initializeable.sol";
+import "solmate/utils/FixedPointMathLib.sol";
 
 
 
 contract NSPool is ERC20Initializeable {
     using SafeERC20 for IERC20Metadata;
     using PRBMath for uint;
+    // using FixedPointMathLib for uint;
 
     address public tokenA;
     address public tokenB;
 
+    address public owner;
     mapping(address => uint) public tokenToInternalBalance;
+
+    uint fee = 30; // basis points. so .3%
 
     bool public initialized;
 
@@ -48,6 +53,7 @@ contract NSPool is ERC20Initializeable {
         // set tokenA and tokenB on deploy
         tokenA = _tokenA;
         tokenB = _tokenB;
+        owner = msg.sender;
     }
 
 
@@ -69,19 +75,32 @@ contract NSPool is ERC20Initializeable {
 
     }
 
+    function setFee(uint newFee) public {
+        fee = newFee;
+
+    }
+
     function getBalances() public view returns(uint balanceA, uint balanceB) {
         balanceA = tokenToInternalBalance[tokenA];
         balanceB = tokenToInternalBalance[tokenB];
 
     }
+
+
+    // ---------------------------------------------------------------------------------
+    //                                      helpers
     
-    // create public function returning amount of other token to add, for frontend
 
     function getLiquidityAmount(address token, uint amount) public view returns(address otherToken, uint otherAmount) {
         otherToken = getOtherToken(token);
         uint ratio = tokenToInternalBalance[otherToken].mulDiv(1 ether, tokenToInternalBalance[token]);
         otherAmount = (amount * ratio) / 1 ether;
     }
+    function getOtherToken(address token) internal view returns(address) {
+        return token == tokenB ? tokenA : tokenB;
+    }
+    // ---------------------------------------------------------------------------------
+
 
     function addLiquidity(address token, uint amount) public {
         (address otherToken, uint otherAmount) = getLiquidityAmount(token,amount);
@@ -112,42 +131,58 @@ contract NSPool is ERC20Initializeable {
         return (tokenToInternalBalance[tokenA] * tokenToInternalBalance[tokenB]).sqrt();
     }
 
-    function getOtherToken(address token) internal view returns(address) {
-        return token == tokenB ? tokenA : tokenB;
-    }
 
 
     // dx = (X*dy) / (Y - dy)
     function getTokenAndAmountIn(address tokenOut, uint amountOut) public view returns (address tokenIn, uint amountIn) {
         tokenIn = getOtherToken(tokenOut);
         
-        
+        // another option:
+        // amountIn = tokenToInternalBalance[tokenIn].mulDivUp(amountOut, tokenToInternalBalance[tokenOut] - amountOut);
 
         uint num = tokenToInternalBalance[tokenIn] * amountOut;
         uint den = tokenToInternalBalance[tokenOut] - amountOut;
 
-        // amountIn = tokenToInternalBalance[tokenIn].mulDiv(amountOut,den);
         amountIn = num / den;
+        // add fees:
+        // since were providing the exact amount we want to receive, 
+        // we need add the fee to the amount we need to send
+        amountIn = amountIn + ((amountIn * fee) / 10_000);
 
     }
-    function _swap(address tokenIn, address tokenOut, uint amountIn, uint amountOut) private {
-        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-        tokenToInternalBalance[tokenIn] += amountIn;
-
-        IERC20Metadata(tokenOut).safeTransfer(msg.sender, amountOut);
-        tokenToInternalBalance[tokenOut] -= amountOut;
-        emit Swap();
-    }
-
-    // dy = (Y*dx) / (X + dx)
+        // dy = (Y*dx) / (X + dx)
     function getTokenAndAmountOut(address tokenIn, uint amountIn) public view returns(address tokenOut, uint amountOut) {
         tokenOut = getOtherToken(tokenIn); 
+
+        // another option:
+        // amountOut = tokenToInternalBalance[tokenOut].mulDivUp(amountIn, tokenToInternalBalance[tokenIn] + amountIn);
         uint num = tokenToInternalBalance[tokenOut] * amountIn;
         uint den = tokenToInternalBalance[tokenIn] + amountIn;
         
-        // amountOut = tokenToInternalBalance[tokenOut].mulDiv(amountIn,den);
         amountOut = num / den;
+        // add fees:
+        // since were specifying the exact amount we want to send,
+        // we need to subtract the fee from the amount out, so we receive lightly less
+        amountOut = amountOut - ((amountOut * fee) / 10_000); // subtracts .3 percent
 
+    }
+
+
+    // amountIn = 50 amountOut = 10 fee = .3% 
+    // after amountIn = 49.85 afterAmountOut = 9.97
+    function _swap(address tokenIn, address tokenOut, uint amountIn, uint amountOut) private {
+
+        
+        
+
+        IERC20Metadata(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);        
+        tokenToInternalBalance[tokenIn] += amountIn;
+        tokenToInternalBalance[tokenOut] -= amountOut;
+        // amountIn = amountIn - ((amountIn * fee) / 10_000);
+        // amountOut = amountOut - ((amountOut * fee) / 10_000);
+        IERC20Metadata(tokenOut).safeTransfer(msg.sender, amountOut);
+        
+        emit Swap();
     }
 
     function swapExactAmountOut(uint amountOut, address tokenOut) public onlyPair(tokenOut) returns(uint) { 
@@ -175,6 +210,8 @@ contract NSPool is ERC20Initializeable {
         require(amountIn <= highestAmountIn,"bad price");
         _swap(tokenIn, tokenOut,amountIn,amountOut);        
     }
+
+    
     // protects users from receiving less than expected for `amountIn` tokens
     function swapExactInWithSlippageProtection(uint targetAmountOut, uint amountIn,  address tokenIn, uint maxBadSlippagePercent) public {
         (address tokenOut, uint amountOut) = getTokenAndAmountOut(tokenIn, amountIn);

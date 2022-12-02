@@ -13,7 +13,7 @@ import "forge-std/console.sol";
 
 contract NolanSwapTest is Test {
     INSPool public schrute_Stanley;
-    INSPool public newTokenA_NewTokenB;
+    INSPool public newTokenA_newTokenB;
     INSPool public stanleyNickels_newTokenA;
 
     // tokens for us to swap
@@ -34,12 +34,23 @@ contract NolanSwapTest is Test {
         newTokenB = new MockERC20("Token B", "tokenB");
         poolFactory = new PoolFactory();
         nsRouter = new NSRouter(address(poolFactory));
-        poolFactory.createPair(address(schruteBucks), address(stanleyNickels));
 
-        schrute_Stanley = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
+
+        // create pools:
+        schrute_Stanley = INSPool(poolFactory.createPair(address(schruteBucks), address(stanleyNickels)));
+        newTokenA_newTokenB = INSPool(poolFactory.createPair(address(newTokenA), address(newTokenB)));
+
+        // schrute_Stanley = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
         // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
         schruteBucks.approve(address(schrute_Stanley), 2000 ether);
         stanleyNickels.approve(address(schrute_Stanley), 2000 ether);
+
+        newTokenA.approve(address(newTokenA_newTokenB), 2000 ether);
+        newTokenB.approve(address(newTokenA_newTokenB), 2000 ether);
+
+    }
+
+    function initializeAllPools() internal {
 
     }
 
@@ -70,6 +81,7 @@ contract NolanSwapTest is Test {
         schrute_Stanley.initializePool(1000 ether, 1000 ether);
 
         (,uint amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), 50 ether); 
+        console.log(amountOut);
 
 
     }
@@ -145,7 +157,7 @@ contract NolanSwapTest is Test {
         // tokenB = stanleyNickels
         uint swapAmountIn = 50 ether;
         uint targetAmountOut = 50 ether;
-        uint maxPercent = 5;
+        uint maxPercent = 6;
         // so the minimum amount we want to receive is targetAmountOut - 5%
 
         uint worstPrice = targetAmountOut - ((targetAmountOut * maxPercent) / 100); // = 47500000000000000000
@@ -187,7 +199,7 @@ contract NolanSwapTest is Test {
         // tokenB = stanleyNickels
         uint swapAmountOut = 50 ether;
         uint targetAmountIn = 50 ether;
-        uint maxPercent = 5;
+        uint maxPercent = 6;
         // so the max amount we want to send is targetAmountIn + 5%
 
         uint worstPrice = targetAmountIn + ((targetAmountIn * maxPercent) / 100); // = 47500000000000000000
@@ -294,6 +306,7 @@ contract NolanSwapTest is Test {
         schrute_Stanley.addLiquidity(address(stanleyNickels), 15 ether);
         vm.stopPrank();
         (uint balanceA, uint balanceB) = schrute_Stanley.getBalances();
+
         assertEq(balanceA, 1150 ether);
         assertEq(balanceB, 115 ether);
          
@@ -302,81 +315,22 @@ contract NolanSwapTest is Test {
 
     }
 
-    function testMultiHopSwap() public {
-        // create pool for our new tokens
-        // this is the last hop in our path.
-        address _newTokenA_NewTokenB = poolFactory.createPair(address(newTokenA), address(newTokenB));
-        newTokenA_NewTokenB = INSPool(_newTokenA_NewTokenB);
-        newTokenA.approve(_newTokenA_NewTokenB, 2000 ether);
-        newTokenB.approve(_newTokenA_NewTokenB, 2000 ether);
-
-        // create intermediary pool for the hops
-        address _stanleyNickels_newTokenA = poolFactory.createPair(address(stanleyNickels), address(newTokenA));
-        stanleyNickels_newTokenA = INSPool(_stanleyNickels_newTokenA);
-        newTokenA.approve(_stanleyNickels_newTokenA, 2000 ether);
-        stanleyNickels.approve(_stanleyNickels_newTokenA, 2000 ether);
-
-
-
+    function testSwapWithFees() public {
+        // setting up two pools with the same reserves, one with fees turned off
         schrute_Stanley.initializePool(1000 ether, 100 ether);
-        stanleyNickels_newTokenA.initializePool(300 ether, 300 ether);
-        newTokenA_NewTokenB.initializePool(700 ether, 700 ether);
-        
-        // [schruteBucks,stanleyNickels,newTokenA,newTokenB]
-        
-        address[] memory path = new address[](4);
+        newTokenA_newTokenB.initializePool(1000 ether, 100 ether);
+        newTokenA_newTokenB.setFee(0);
 
-        path[0] = address(schruteBucks);
-        path[1] = address(stanleyNickels);
-        path[2] = address(newTokenA);
-        path[3] = address(newTokenB);
+        (, uint stanleyOut) = schrute_Stanley.getTokenAndAmountIn(address(schruteBucks), 50 ether);
+        (, uint newTokenBOut) = newTokenA_newTokenB.getTokenAndAmountIn(address(newTokenA), 50 ether);
 
-        uint amountIn = 50 ether;
-        (,uint stanleyNickelsAmount) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), amountIn);
-        (,uint newTokenAAmount) = stanleyNickels_newTokenA.getTokenAndAmountOut(address(stanleyNickels), stanleyNickelsAmount);
-        (,uint newTokenBAmount) = newTokenA_NewTokenB.getTokenAndAmountOut(address(newTokenA), newTokenAAmount);
-        // console.log("stanley nickels amount: ", stanleyNickelsAmount);
-        // console.log("new tokenA amount: ", newTokenAAmount);
-        // console.log("new tokenB amount: ", newTokenBAmount);
+        console.log(stanleyOut * 1 ether/newTokenBOut);
 
-        // lets figure out how many tokens should come out at the end:
-        // formula: dy = (Y*dx) / (X + dx)
-
-        // first swap: between schrute bucks and stanley nickels
-        // (100 x 50) / (1000 + 50) = 4.76190476 -- 4761904761904761904
-        // input - 50 schrute bucks
-        // output - 4.76190476 stanley nickels
-
-        // second swap: between stanley nickels and newTokenA:
-        // (300 x 4.76190476) / (300 + 4.76190476) = 4.68749999815
-        // input - 4.76190476 stanley nickels
-        // output - 4.68749999815 new tokenA
-        
-        // third and last swap: betweem newTokenA and newTokenB
-        // (700 x 4.68749999815) / (700 + 4.68749999815) = 4.656319288640
-        // input - 4.68749999815 newTokenA
-        // output = 4.656319288640 newTokenB
-
-         
-        uint newTokenB_BalanceBefore = newTokenB.balanceOf(address(this));
-        // approve the first token in the path to be spent by the router
-        schruteBucks.approve(address(nsRouter), amountIn);
-        // execute swap
-        uint amountOut = nsRouter.swapExactInMultiHop(path, amountIn);
-
-        // make sure the swap function returns the same amount that we calculated
-        assertEq(newTokenBAmount, amountOut);
-
-        // check is balance is equal balance before + amountOut
-        uint newTokenB_BalanceAfter = newTokenB.balanceOf(address(this));
-        assertEq(newTokenB_BalanceBefore + newTokenBAmount, newTokenB_BalanceAfter);
-
-
-
-
-
+        // so it works, but not sure how to test with assertEq or something
 
     }
+
+    
 
 
 }
