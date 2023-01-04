@@ -21,7 +21,7 @@ contract NSPool is ERC20Initializeable {
     address public factory;
     mapping(address => uint) public tokenToInternalBalance;
 
-    uint public fee = 3; // represents .3%
+    uint public fee; 
 
     // bool public initialized;
 
@@ -54,6 +54,7 @@ contract NSPool is ERC20Initializeable {
         tokenA = _tokenA;
         tokenB = _tokenB;
         factory = msg.sender;
+        fee = 3; // represents .3%
     }
 
 

@@ -23,7 +23,7 @@ contract NSPoolStandard is ERC20 {
     address public factory;
     mapping(address => uint) public tokenToInternalBalance;
 
-    uint public fee = 3; // represents .3%
+    uint public fee;
 
     // bool public initialized;
 
@@ -51,6 +51,7 @@ contract NSPoolStandard is ERC20 {
             tokenA = _tokenA;
             tokenB = _tokenB;
             factory = msg.sender;
+            fee = 3; // represents .3%
 
     }
 

@@ -9,7 +9,6 @@ import "forge-std/console.sol";
 
 contract Deploy is Script {
     function run() external returns(address _factory, address _schrute, address _stanley, address _ct1, address _ct2) {
-        // uint256 deployerPrivateKey = vm.env(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80);
         vm.startBroadcast(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80);
         
         PoolFactory poolFactory = new PoolFactory();

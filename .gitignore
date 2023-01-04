@@ -9,3 +9,5 @@ out/
 
 # Dotenv file
 .env
+
+/script/Deploy.s.sol
