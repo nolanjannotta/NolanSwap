@@ -104,15 +104,14 @@ contract NolanSwapTest is Test {
         vm.expectRevert(bytes("already Initialized"));
         schrute_Stanley.initializePool(50 ether, 20 ether);
 
-
-
     }
 
     function testAmountOut() public {
         schrute_Stanley.initializePool(1000 ether, 1000 ether);
 
         (,uint amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), 50 ether); 
-        console.log(amountOut);
+
+        
 
 
     }

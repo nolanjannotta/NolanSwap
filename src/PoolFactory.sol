@@ -20,6 +20,12 @@ contract PoolFactory is Ownable {
 
     address poolImplementation;
 
+    modifier Createable(address tokenA, address tokenB) {
+        require(tokenA != tokenB);
+        require(tokenToTokenToPool[tokenA][tokenB] == address(0));
+        _;
+    }
+
 
 
     constructor() {
@@ -33,9 +39,8 @@ contract PoolFactory is Ownable {
         pool = tokenToTokenToPool[token1][token2];
     }
 
-    function createPairClone(address tokenA, address tokenB) public returns (address) {
-        require(tokenA != tokenB);
-        require(tokenToTokenToPool[tokenA][tokenB] == address(0));
+    function createPairClone(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns (address) {
+        
         address pool = Clones.clone(poolImplementation);
         NSPool(pool).initialize(tokenA, tokenB);
         tokenToTokenToPool[tokenA][tokenB] = pool;
@@ -45,9 +50,8 @@ contract PoolFactory is Ownable {
 
     }
 
-    function createPair(address tokenA, address tokenB) public returns(address) {
-        require(tokenA != tokenB);
-        require(tokenToTokenToPool[tokenA][tokenB] == address(0));
+    function createPairCreate2(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns(address) {
+
         bytes memory bytecode = type(NSPool).creationCode;
         salt ++;
         address pool = Create2.deploy(0,bytes32(salt), bytecode);
@@ -60,10 +64,7 @@ contract PoolFactory is Ownable {
 
     }
 
-    function createPairStandard(address tokenA, address tokenB) public returns(address) {
-        require(tokenA != tokenB);
-        require(tokenToTokenToPool[tokenA][tokenB] == address(0));
-
+    function createPairStandard(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns(address) {
         address pool = address(new NSPoolStandard(tokenA, tokenB));
 
         tokenToTokenToPool[tokenA][tokenB] = pool;

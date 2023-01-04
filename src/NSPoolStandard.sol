@@ -57,7 +57,7 @@ contract NSPoolStandard is ERC20 {
 
     function initializePool(uint amountA, uint amountB) public {
         // called once to add initial liquidity to pool
-        require(initialized(), "already Initialized");
+        require(!initialized(), "already Initialized");
         // initialized = true;
         // transfer tokenA, update internal balance
         IERC20Metadata(tokenA).safeTransferFrom(msg.sender, address(this), amountA);
@@ -89,9 +89,7 @@ contract NSPoolStandard is ERC20 {
     //                                      helpers
     
     function initialized() public view returns(bool) {
-        return (tokenToInternalBalance[tokenA] == 0 && tokenToInternalBalance[tokenB] == 0);
-
-
+        return (tokenToInternalBalance[tokenA] != 0 && tokenToInternalBalance[tokenB] != 0);
     }
 
 

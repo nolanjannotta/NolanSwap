@@ -35,7 +35,7 @@ contract RouterTest is Test {
 
         poolFactory = new PoolFactory();
         nsRouter = new NSRouter(address(poolFactory));
-        poolFactory.createPair(address(schruteBucks), address(stanleyNickels));
+        poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels));
 
         schrute_StanleyPool = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
         // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
@@ -48,13 +48,13 @@ contract RouterTest is Test {
         // create pool for our new tokens
 
         // this is the last hop in our path.
-        address _newTokenA_NewTokenB = poolFactory.createPair(address(newTokenA), address(newTokenB));
+        address _newTokenA_NewTokenB = poolFactory.createPairClone(address(newTokenA), address(newTokenB));
         newTokenA_NewTokenB = INSPool(_newTokenA_NewTokenB);
         newTokenA.approve(_newTokenA_NewTokenB, 2000 ether);
         newTokenB.approve(_newTokenA_NewTokenB, 2000 ether);
 
         // create intermediary pool for the hops
-        address _stanleyNickels_newTokenA = poolFactory.createPair(address(stanleyNickels), address(newTokenA));
+        address _stanleyNickels_newTokenA = poolFactory.createPairClone(address(stanleyNickels), address(newTokenA));
         stanleyNickels_newTokenA = INSPool(_stanleyNickels_newTokenA);
         newTokenA.approve(_stanleyNickels_newTokenA, 2000 ether);
         stanleyNickels.approve(_stanleyNickels_newTokenA, 2000 ether);
@@ -129,7 +129,7 @@ contract RouterTest is Test {
     function testMultiHopSwapExactOut() public {
         // create pool for our new tokens
         // this is the last hop in our path.
-        address _newTokenA_NewTokenB = poolFactory.createPair(address(newTokenA), address(newTokenB));
+        address _newTokenA_NewTokenB = poolFactory.createPairClone(address(newTokenA), address(newTokenB));
 
         newTokenA_NewTokenB = INSPool(_newTokenA_NewTokenB);
         // allow the pool to swap our tokens
@@ -137,7 +137,7 @@ contract RouterTest is Test {
         newTokenB.approve(_newTokenA_NewTokenB, 2000 ether);
 
         // create intermediary pool for the hops
-        address _stanleyNickels_newTokenA = poolFactory.createPair(address(stanleyNickels), address(newTokenA));
+        address _stanleyNickels_newTokenA = poolFactory.createPairClone(address(stanleyNickels), address(newTokenA));
 
         stanleyNickels_newTokenA = INSPool(_stanleyNickels_newTokenA);
         // allow the pool to swap our tokens
