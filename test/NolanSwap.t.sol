@@ -37,8 +37,8 @@ contract NolanSwapTest is Test {
 
 
         // create pools:
-        schrute_Stanley = INSPool(poolFactory.createPair(address(schruteBucks), address(stanleyNickels)));
-        newTokenA_newTokenB = INSPool(poolFactory.createPair(address(newTokenA), address(newTokenB)));
+        schrute_Stanley = INSPool(poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels)));
+        newTokenA_newTokenB = INSPool(poolFactory.createPairClone(address(newTokenA), address(newTokenB)));
 
         // schrute_Stanley = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
         // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
@@ -61,8 +61,8 @@ contract NolanSwapTest is Test {
     }
 
     function testMocks() public {
-        assertEq(schruteBucks.balanceOf(address(this)), 2000 ether);
-        assertEq(stanleyNickels.balanceOf(address(this)), 2000 ether);
+        assertEq(schruteBucks.balanceOf(address(this)), 50_000 ether);
+        assertEq(stanleyNickels.balanceOf(address(this)), 50_000 ether);
     }
 
     function testTokens() public {
@@ -75,6 +75,36 @@ contract NolanSwapTest is Test {
         schrute_Stanley.initializePool(1000 ether, 2000 ether);
         // schrutebucks = 1000 
         // stanleyNickels = 2000
+
+    }
+
+    function testInitializePoolIfBalanceAreZero() public {
+        // if a pool is already initialized, but for some reason all liquidity has been removed,
+        // this tests if a user can reinitialize the pool
+
+        schrute_Stanley.initializePool(1000 ether, 1500 ether);
+        uint totalLiquidity = schrute_Stanley.totalLiquidity();
+        schrute_Stanley.removeLiquidity(totalLiquidity);
+        uint totalLiquidityAfter = schrute_Stanley.totalLiquidity();
+
+        (uint tokenAReserves, uint tokenBReserves) = schrute_Stanley.getBalances();
+        assertEq(tokenAReserves,0);
+        assertEq(tokenBReserves,0);
+        assertEq(totalLiquidityAfter, 0);
+
+        // since both reserves are zero, should be able to initialize again.
+
+        schrute_Stanley.initializePool(50 ether, 20 ether);
+
+        (tokenAReserves, tokenBReserves) = schrute_Stanley.getBalances();
+        assertEq(tokenAReserves, 50 ether);
+        assertEq(tokenBReserves, 20 ether);
+        
+        // since they are not zero, initializing again should revert
+        vm.expectRevert(bytes("already Initialized"));
+        schrute_Stanley.initializePool(50 ether, 20 ether);
+
+
 
     }
 
@@ -219,6 +249,7 @@ contract NolanSwapTest is Test {
         // worstPrice = 47500000000000000000
         // since amountOut is GREATER than the users worst acceptable price. this swap should work
         schruteBucks.approve(address(schrute_Stanley), swapAmountOut);
+
         // swap
         schrute_Stanley.swapExactInWithSlippageProtection(targetAmountIn, swapAmountOut, address(stanleyNickels), maxPercent); 
 
@@ -322,7 +353,8 @@ contract NolanSwapTest is Test {
         poolFactory.setFee(address(newTokenA_newTokenB), 0);
 
         // call setFee directly on pool contract
-        vm.expectRevert(bytes('Ownable: caller is not the owner'));
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(bytes('Only factory'));
         newTokenA_newTokenB.setFee(0);
 
     }

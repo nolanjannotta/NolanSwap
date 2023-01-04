@@ -42,6 +42,8 @@ contract ERC20Initializeable is Context, IERC20, IERC20Metadata {
     string private _name;
     string private _symbol;
 
+    bool private initialized;
+
     /**
      * @dev Sets the values for {name} and {symbol}.
      *
@@ -52,6 +54,8 @@ contract ERC20Initializeable is Context, IERC20, IERC20Metadata {
      * construction.
      */
     function _initialize(string memory name_, string memory symbol_) public {
+        require(!initialized);
+        initialized = true;
         _name = name_;
         _symbol = symbol_;
     }

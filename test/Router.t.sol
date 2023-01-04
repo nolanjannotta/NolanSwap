@@ -12,7 +12,7 @@ import "forge-std/console.sol";
 
 
 contract RouterTest is Test {
-    INSPool public schrute_Stanley;
+    INSPool public schrute_StanleyPool;
     INSPool public newTokenA_NewTokenB;
     INSPool public stanleyNickels_newTokenA;
 
@@ -37,10 +37,10 @@ contract RouterTest is Test {
         nsRouter = new NSRouter(address(poolFactory));
         poolFactory.createPair(address(schruteBucks), address(stanleyNickels));
 
-        schrute_Stanley = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
+        schrute_StanleyPool = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
         // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
-        schruteBucks.approve(address(schrute_Stanley), 2000 ether);
-        stanleyNickels.approve(address(schrute_Stanley), 2000 ether);
+        schruteBucks.approve(address(schrute_StanleyPool), 2000 ether);
+        stanleyNickels.approve(address(schrute_StanleyPool), 2000 ether);
 
     }
 
@@ -61,13 +61,14 @@ contract RouterTest is Test {
 
 
 
-        schrute_Stanley.initializePool(1000 ether, 100 ether);
+        schrute_StanleyPool.initializePool(1000 ether, 100 ether);
         stanleyNickels_newTokenA.initializePool(300 ether, 300 ether);
         newTokenA_NewTokenB.initializePool(700 ether, 700 ether);
         
-        // [schruteBucks,stanleyNickels,newTokenA,newTokenB]
+        
         
         address[] memory path = new address[](4);
+        // [schruteBucks,stanleyNickels,newTokenA,newTokenB]
 
         path[0] = address(schruteBucks);
         path[1] = address(stanleyNickels);
@@ -77,7 +78,7 @@ contract RouterTest is Test {
         // we want to spend exactly 50 schruteBucks for as much of newTokenB
         uint amountIn = 50 ether;
 
-        (,uint stanleyNickelsAmount) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), amountIn);
+        (,uint stanleyNickelsAmount) = schrute_StanleyPool.getTokenAndAmountOut(address(schruteBucks), amountIn);
         (,uint newTokenAAmount) = stanleyNickels_newTokenA.getTokenAndAmountOut(address(stanleyNickels), stanleyNickelsAmount);
         (,uint newTokenBAmount) = newTokenA_NewTokenB.getTokenAndAmountOut(address(newTokenA), newTokenAAmount);
         // console.log("stanley nickels amount: ", stanleyNickelsAmount);
@@ -85,10 +86,12 @@ contract RouterTest is Test {
         // console.log("new tokenB amount: ", newTokenBAmount);
 
         // lets figure out how many tokens should come out at the end:
-        // formula: dy = (Y*dx) / (X + dx)
+        // formula: 
+        //   dy = (Y*dx) / (X + dx)  
+        //   amountOut = (tokenBReserves * amountIn) / (tokenAReserves + amountIn)
 
         // first swap: between schrute bucks and stanley nickels
-        // (100 x 50) / (1000 + 50) = 4.76190476 -- 4761904761904761904
+        // (100 x 50) / (1000 + 50) = 4.76190476...
         // input - 50 schrute bucks
         // output - 4.76190476 stanley nickels
 
@@ -143,7 +146,7 @@ contract RouterTest is Test {
 
 
         // initialize all the pools for our swap
-        schrute_Stanley.initializePool(1000 ether, 500 ether);
+        schrute_StanleyPool.initializePool(1000 ether, 500 ether);
         stanleyNickels_newTokenA.initializePool(300 ether, 300 ether);
         newTokenA_NewTokenB.initializePool(700 ether, 500 ether);
         
@@ -160,7 +163,7 @@ contract RouterTest is Test {
         // we want to receive exactly 10 newTokenBs for an unknown amount of schruteBucks
         uint amountOut = 10 ether;
 
-        // (,uint stanleyNickelsAmount) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), amountIn);
+        // (,uint stanleyNickelsAmount) = schrute_StanleyPool.getTokenAndAmountOut(address(schruteBucks), amountIn);
         // (,uint newTokenAAmount) = stanleyNickels_newTokenA.getTokenAndAmountOut(address(stanleyNickels), stanleyNickelsAmount);
         // (,uint newTokenBAmount) = newTokenA_NewTokenB.getTokenAndAmountOut(address(newTokenA), newTokenAAmount);
         // console.log("stanley nickels amount: ", stanleyNickelsAmount);
@@ -168,31 +171,36 @@ contract RouterTest is Test {
         // console.log("new tokenB amount: ", newTokenBAmount);
 
         // lets figure out how many schruteBucks we need to send to receive 10 newTokenBs:
-        // formula: dx = (X*dy) / (Y - dy)
+        // formula:
+        //   dx = (X*dy) / (Y - dy)
+        //  amountIn = (tokenAReserves * amountOut) / (tokenbReserves - amountOut)
 
         // PATH =  [schruteBucks,stanleyNickels,newTokenA,newTokenB]
 
         // last swap: between newTokenA and newTokenB
         // (700 x 10) / (500 - 10) = 14.285714285714
-        // input - 14.285714285714 newTokenA
+        // after fee: 14.285714285714 + (14.285714285714 * .003) = 14.328571428571142
+        // input - 14.328571428571142 newTokenA
         // output - 10 newTokenB
-        (,uint newTokenAIn) = newTokenA_NewTokenB.getTokenAndAmountIn(address(newTokenB), 10 ether);
+        (,uint newTokenAIn) = newTokenA_NewTokenB.getTokenAndAmountIn(address(newTokenB), amountOut);
         console.log("newTokenAIn", newTokenAIn);
 
         // second to last swap: between stanley nickels and newTokenA:
-        // (300 x 14.285714285714) / (300 - 14.285714285714) = 14.999999999999
-        // input - 14.999999999999 stanley nickels
-        // output - 14.285714285714 new tokenA
+        // (300 x 14.328571428571142) / (300 - 14.328571428571142) = 15.047257088562
+        // fee: 15.047257088562 + (15.047257088562 *  .003) = 15.092398859827686
+        // input - 15.092398859827686 stanley nickels
+        // output - 14.328571428571142 new tokenA
         (,uint stanleyNickelsIn) = stanleyNickels_newTokenA.getTokenAndAmountIn(address(newTokenA), newTokenAIn);
         console.log("stanleyNickelsIn", stanleyNickelsIn);
         
         // first swap: betweem schruteBucks and stanleyNickels
-        // (1000 x 14.999999999999) / (500 - 14.999999999999) = 30.9278350515463598
-        // input - 30.9278350515463598 schruteBucks
-        // output = 14.999999999999 stanleyNickels
-        (,uint schruteBucksIn) = schrute_Stanley.getTokenAndAmountIn(address(stanleyNickels), stanleyNickelsIn);
+        // (1000 x 15.092398859827686) / (500 - 15.092398859827686) = 31.12427774763820
+        // fee: 31.12427774763820 + (31.12427774763820 * .003) = 31.2176505808811146
+        // input - 31.2176505808811146 schruteBucks
+        // output = 15.092398859827686 stanleyNickels
+        (,uint schruteBucksIn) = schrute_StanleyPool.getTokenAndAmountIn(address(stanleyNickels), stanleyNickelsIn);
         console.log("schruteBucksIn", schruteBucksIn);
-
+        // so looks like we need to send 30.9278350515463598 for 10 
          
         uint newTokenB_BalanceBefore = newTokenB.balanceOf(address(this));
         // console.log("newTokenB before", newTokenB_BalanceBefore);

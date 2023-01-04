@@ -2,6 +2,7 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol"; 
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "prb-math/PRBMath.sol";
@@ -10,7 +11,8 @@ import "solmate/utils/FixedPointMathLib.sol";
 
 
 
-contract NSPool is ERC20Initializeable {
+contract NSPoolStandard is ERC20 {
+
     using SafeERC20 for IERC20Metadata;
     using PRBMath for uint;
     // using FixedPointMathLib for uint;
@@ -41,19 +43,15 @@ contract NSPool is ERC20Initializeable {
     error AlreadyInitialized();
 
 
-
-    function initialize(address _tokenA, address _tokenB) public {
-        
-    
-        _initialize(
+    constructor(address _tokenA, address _tokenB) ERC20(
             string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP_Tokens")), 
-            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP")));
+            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP"))) {
+            require(_tokenA != address(0) && _tokenB != address(0));
+            // set tokenA and tokenB on deploy
+            tokenA = _tokenA;
+            tokenB = _tokenB;
+            factory = msg.sender;
 
-        require(_tokenA != address(0) && _tokenB != address(0));
-        // set tokenA and tokenB on deploy
-        tokenA = _tokenA;
-        tokenB = _tokenB;
-        factory = msg.sender;
     }
 
 

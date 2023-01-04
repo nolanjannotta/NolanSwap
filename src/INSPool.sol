@@ -54,5 +54,8 @@ interface INSPool {
 
     function setFee(uint newFee) external;
 
+    function isInitializable() external returns (bool);
+    function initialized() external returns (bool);
+
 
 }
