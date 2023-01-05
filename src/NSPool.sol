@@ -2,15 +2,15 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+import "@openzeppelinUpgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "prb-math/PRBMath.sol";
-import "./ERC20Initializeable.sol";
 import "solmate/utils/FixedPointMathLib.sol";
+import "./IFactory.sol";
 
 
 
-contract NSPool is ERC20Initializeable {
+contract NSPool is ERC20Upgradeable {
     using SafeERC20 for IERC20Metadata;
     using PRBMath for uint;
     // using FixedPointMathLib for uint;
@@ -42,13 +42,10 @@ contract NSPool is ERC20Initializeable {
 
 
 
-    function initialize(address _tokenA, address _tokenB) public {
-        
-    
-        _initialize(
-            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP_Tokens")), 
-            string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP")));
-
+    function initialize(address _tokenA, address _tokenB) initializer public {
+        string memory _name = string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP_Tokens"));
+        string memory _symbol = string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP"));
+        __ERC20_init_unchained(_name, _symbol);
         require(_tokenA != address(0) && _tokenB != address(0));
         // set tokenA and tokenB on deploy
         tokenA = _tokenA;
@@ -77,7 +74,7 @@ contract NSPool is ERC20Initializeable {
     }
 
     function setFee(uint newFee) public {
-        require(msg.sender == factory, "Only factory");
+        require(msg.sender == factory || msg.sender == IFactory(factory).owner(), "Only factory or owner");
         fee = newFee;
 
     }
@@ -192,7 +189,7 @@ contract NSPool is ERC20Initializeable {
     // these functions protect users from bad slippage
 
     // protects users from sending more than expected for receiving `amountOut` tokens
-    function swapExactOutWithSlippageProtection(uint targetAmountIn, uint amountOut, address tokenOut, uint maxBadSlippagePercent) public {
+    function swapExactOutWithSlippageProtection(uint targetAmountIn, uint amountOut, address tokenOut, uint maxBadSlippagePercent) onlyPair(tokenOut) public {
 
         (address tokenIn, uint amountIn) = getTokenAndAmountIn(tokenOut, amountOut);
         uint highestAmountIn = targetAmountIn + ((targetAmountIn * maxBadSlippagePercent) / 100);
@@ -202,7 +199,7 @@ contract NSPool is ERC20Initializeable {
 
     
     // protects users from receiving less than expected for `amountIn` tokens
-    function swapExactInWithSlippageProtection(uint targetAmountOut, uint amountIn,  address tokenIn, uint maxBadSlippagePercent) public {
+    function swapExactInWithSlippageProtection(uint targetAmountOut, uint amountIn,  address tokenIn, uint maxBadSlippagePercent) onlyPair(tokenIn) public {
         (address tokenOut, uint amountOut) = getTokenAndAmountOut(tokenIn, amountIn);
         uint lowestAmountOut = targetAmountOut - ((targetAmountOut * maxBadSlippagePercent) / 100);
         require(amountOut >= lowestAmountOut, "bad price");

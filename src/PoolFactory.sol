@@ -38,15 +38,22 @@ contract PoolFactory is Ownable {
     function getPool(address token1, address token2) public view returns(address pool) {
         pool = tokenToTokenToPool[token1][token2];
     }
+    function setFee(address pool, uint newFee) public onlyOwner {
+        NSPool(pool).setFee(newFee);
+    }
+
+    function _setPool(address tokenA, address tokenB, address pool) private returns (address) {
+        tokenToTokenToPool[tokenA][tokenB] = pool;
+        tokenToTokenToPool[tokenB][tokenA] = pool;
+        emit PoolCreated();
+        return pool;
+    }
 
     function createPairClone(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns (address) {
         
         address pool = Clones.clone(poolImplementation);
         NSPool(pool).initialize(tokenA, tokenB);
-        tokenToTokenToPool[tokenA][tokenB] = pool;
-        tokenToTokenToPool[tokenB][tokenA] = pool;
-        emit PoolCreated();
-        return pool;
+        return _setPool(tokenA, tokenB, pool);
 
     }
 
@@ -56,28 +63,20 @@ contract PoolFactory is Ownable {
         salt ++;
         address pool = Create2.deploy(0,bytes32(salt), bytecode);
         NSPool(pool).initialize(tokenA, tokenB);
-        tokenToTokenToPool[tokenA][tokenB] = pool;
-        tokenToTokenToPool[tokenB][tokenA] = pool;
-        emit PoolCreated();
-        return pool;
+        return _setPool(tokenA, tokenB, pool);
 
 
     }
 
     function createPairStandard(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns(address) {
         address pool = address(new NSPoolStandard(tokenA, tokenB));
-
-        tokenToTokenToPool[tokenA][tokenB] = pool;
-        tokenToTokenToPool[tokenB][tokenA] = pool;
-        emit PoolCreated();
-        return pool;
+        return _setPool(tokenA, tokenB, pool);
+        
 
 
     }
     
-    function setFee(address pool, uint newFee) public onlyOwner {
-        NSPool(pool).setFee(newFee);
-    }
+
 
 
 

@@ -4,12 +4,9 @@ import "./PoolFactory.sol";
 import "./INSPool.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import "./IFactory.sol";
 
 
-interface IFactory {
-
-    function getPool(address token1, address token2) external view returns(address pool); 
-}
 
 
 

@@ -37,8 +37,24 @@ contract NolanSwapTest is Test {
 
 
         // create pools:
-        schrute_Stanley = INSPool(poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels)));
-        newTokenA_newTokenB = INSPool(poolFactory.createPairClone(address(newTokenA), address(newTokenB)));
+        // test all of these!!!!!!!!!!
+
+        // cloning
+        // schrute_Stanley = INSPool(poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels)));
+        // newTokenA_newTokenB = INSPool(poolFactory.createPairClone(address(newTokenA), address(newTokenB)));
+
+
+        // Create2
+        // schrute_Stanley = INSPool(poolFactory.createPairCreate2(address(schruteBucks), address(stanleyNickels)));
+        // newTokenA_newTokenB = INSPool(poolFactory.createPairCreate2(address(newTokenA), address(newTokenB)));
+        
+        // standard contract deploy
+        schrute_Stanley = INSPool(poolFactory.createPairStandard(address(schruteBucks), address(stanleyNickels)));
+        newTokenA_newTokenB = INSPool(poolFactory.createPairStandard(address(newTokenA), address(newTokenB)));
+
+
+
+
 
         // schrute_Stanley = INSPool(poolFactory.getPool(address(schruteBucks), address(stanleyNickels)));
         // nolanSwap = new NolanSwap(address(schruteBucks), address(stanleyNickels), "Nolan Swap", "NSWAP");
@@ -70,6 +86,8 @@ contract NolanSwapTest is Test {
         assertEq(schrute_Stanley.tokenB(), address(stanleyNickels));
 
     }
+
+    
 
     function testInitializePool() public {
         schrute_Stanley.initializePool(1000 ether, 2000 ether);
@@ -122,6 +140,8 @@ contract NolanSwapTest is Test {
 
     }
 
+    
+
     // SWAP TESTS
 
     function testswapExactAmountOut() public {
@@ -154,6 +174,14 @@ contract NolanSwapTest is Test {
         // we should be receiving 'swapAmountOut', and sending 'amountIn'
         assertEq(schruteBalance + swapAmountOut, schruteBucks.balanceOf(address(this)));
         assertEq(stanleyBalance - amountIn, stanleyNickels.balanceOf(address(this)));
+
+
+    }
+
+    function testSwapWithNotPairAddress() public {
+        schrute_Stanley.initializePool(1000 ether, 50 ether); 
+        vm.expectRevert();
+        schrute_Stanley.swapExactAmountOut(1 ether, address(0xBEEF));
 
 
     }
@@ -346,6 +374,29 @@ contract NolanSwapTest is Test {
 
     }
 
+    function testFees() public {
+        uint fee = schrute_Stanley.fee();
+        assertEq(fee, 3);
+
+    }
+
+    function testSetFee() public {
+        uint fee = schrute_Stanley.fee();
+        assertEq(fee, 3);
+
+        poolFactory.setFee(address(schrute_Stanley), 0);
+        fee = schrute_Stanley.fee();
+        assertEq(fee, 0);
+
+        // the owner of the poolfactory is this contract,
+        // so we should be able to set the fee from this contract
+
+        schrute_Stanley.setFee(5);
+        fee = schrute_Stanley.fee();
+        assertEq(fee, 5);
+
+    }
+
     function testNonOwnerSetFee() public {
         vm.prank(address(0xBEEF));
         vm.expectRevert(bytes('Ownable: caller is not the owner'));
@@ -353,7 +404,7 @@ contract NolanSwapTest is Test {
 
         // call setFee directly on pool contract
         vm.prank(address(0xBEEF));
-        vm.expectRevert(bytes('Only factory'));
+        vm.expectRevert(bytes('Only factory or owner'));
         newTokenA_newTokenB.setFee(0);
 
     }

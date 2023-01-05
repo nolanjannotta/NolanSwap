@@ -53,9 +53,12 @@ interface INSPool {
     function swapExactInWithSlippageProtection(uint targetAmountOut, uint amountIn,  address tokenIn, uint maxBadSlippagePercent) external;
 
     function setFee(uint newFee) external;
+    function fee() external returns(uint);
+    
 
     function isInitializable() external returns (bool);
     function initialized() external returns (bool);
+    function initialize() external;
 
 
 }

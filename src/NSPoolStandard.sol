@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "prb-math/PRBMath.sol";
-import "./ERC20Initializeable.sol";
 import "solmate/utils/FixedPointMathLib.sol";
+import "./IFactory.sol";
+
 
 
 
@@ -75,7 +76,7 @@ contract NSPoolStandard is ERC20 {
     }
 
     function setFee(uint newFee) public {
-        require(msg.sender == factory, "Only factory");
+        require(msg.sender == factory || msg.sender == IFactory(factory).owner(), "Only factory or owner");
         fee = newFee;
 
     }
