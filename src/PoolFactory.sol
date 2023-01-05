@@ -52,7 +52,7 @@ contract PoolFactory is Ownable {
     function createPairClone(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns (address) {
         
         address pool = Clones.clone(poolImplementation);
-        NSPool(pool).initialize(tokenA, tokenB);
+        NSPool(pool).__init__(tokenA, tokenB);
         return _setPool(tokenA, tokenB, pool);
 
     }
@@ -62,7 +62,7 @@ contract PoolFactory is Ownable {
         bytes memory bytecode = type(NSPool).creationCode;
         salt ++;
         address pool = Create2.deploy(0,bytes32(salt), bytecode);
-        NSPool(pool).initialize(tokenA, tokenB);
+        NSPool(pool).__init__(tokenA, tokenB);
         return _setPool(tokenA, tokenB, pool);
 
 

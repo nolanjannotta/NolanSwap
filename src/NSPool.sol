@@ -42,12 +42,11 @@ contract NSPool is ERC20Upgradeable {
 
 
 
-    function initialize(address _tokenA, address _tokenB) initializer public {
+    function __init__(address _tokenA, address _tokenB) initializer public {
+        require(_tokenA != address(0) && _tokenB != address(0));
         string memory _name = string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP_Tokens"));
         string memory _symbol = string(abi.encodePacked(IERC20Metadata(_tokenA).symbol(), "/",IERC20Metadata(_tokenB).symbol(), "_LP"));
         __ERC20_init_unchained(_name, _symbol);
-        require(_tokenA != address(0) && _tokenB != address(0));
-        // set tokenA and tokenB on deploy
         tokenA = _tokenA;
         tokenB = _tokenB;
         factory = msg.sender;

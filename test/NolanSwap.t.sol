@@ -40,8 +40,8 @@ contract NolanSwapTest is Test {
         // test all of these!!!!!!!!!!
 
         // cloning
-        // schrute_Stanley = INSPool(poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels)));
-        // newTokenA_newTokenB = INSPool(poolFactory.createPairClone(address(newTokenA), address(newTokenB)));
+        schrute_Stanley = INSPool(poolFactory.createPairClone(address(schruteBucks), address(stanleyNickels)));
+        newTokenA_newTokenB = INSPool(poolFactory.createPairClone(address(newTokenA), address(newTokenB)));
 
 
         // Create2
@@ -49,8 +49,8 @@ contract NolanSwapTest is Test {
         // newTokenA_newTokenB = INSPool(poolFactory.createPairCreate2(address(newTokenA), address(newTokenB)));
         
         // standard contract deploy
-        schrute_Stanley = INSPool(poolFactory.createPairStandard(address(schruteBucks), address(stanleyNickels)));
-        newTokenA_newTokenB = INSPool(poolFactory.createPairStandard(address(newTokenA), address(newTokenB)));
+        // schrute_Stanley = INSPool(poolFactory.createPairStandard(address(schruteBucks), address(stanleyNickels)));
+        // newTokenA_newTokenB = INSPool(poolFactory.createPairStandard(address(newTokenA), address(newTokenB)));
 
 
 
