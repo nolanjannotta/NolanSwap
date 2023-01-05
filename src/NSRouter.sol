@@ -50,12 +50,12 @@ contract NSRouter {
 
     function swapExactOut(address tokenIn, address tokenOut, uint amountOut) public returns(uint) {
         INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
-        pool.swapExactAmountOut(amountOut, tokenOut);
+        return pool.swapExactAmountOut(amountOut, tokenOut);
     }
 
     function swapExactIn(address tokenIn, address tokenOut, uint amountIn) public returns(uint) {
         INSPool pool = INSPool(factory.getPool(tokenIn, tokenOut));
-        pool.swapExactAmountIn(amountIn, tokenIn);
+        return pool.swapExactAmountIn(amountIn, tokenIn);
     }
 
 

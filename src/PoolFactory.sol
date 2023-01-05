@@ -42,7 +42,7 @@ contract PoolFactory is Ownable {
         NSPool(pool).setFee(newFee);
     }
 
-    function _setPool(address tokenA, address tokenB, address pool) private returns (address) {
+    function _createPair(address tokenA, address tokenB, address pool) private returns (address) {
         tokenToTokenToPool[tokenA][tokenB] = pool;
         tokenToTokenToPool[tokenB][tokenA] = pool;
         emit PoolCreated();
@@ -53,24 +53,23 @@ contract PoolFactory is Ownable {
         
         address pool = Clones.clone(poolImplementation);
         NSPool(pool).__init__(tokenA, tokenB);
-        return _setPool(tokenA, tokenB, pool);
+        return _createPair(tokenA, tokenB, pool);
 
     }
 
     function createPairCreate2(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns(address) {
-
         bytes memory bytecode = type(NSPool).creationCode;
         salt ++;
         address pool = Create2.deploy(0,bytes32(salt), bytecode);
         NSPool(pool).__init__(tokenA, tokenB);
-        return _setPool(tokenA, tokenB, pool);
+        return _createPair(tokenA, tokenB, pool);
 
 
     }
 
     function createPairStandard(address tokenA, address tokenB) public Createable(tokenA, tokenB) returns(address) {
         address pool = address(new NSPoolStandard(tokenA, tokenB));
-        return _setPool(tokenA, tokenB, pool);
+        return _createPair(tokenA, tokenB, pool);
         
 
 

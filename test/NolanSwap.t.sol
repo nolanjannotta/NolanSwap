@@ -126,17 +126,27 @@ contract NolanSwapTest is Test {
 
     function testAmountOut() public {
         schrute_Stanley.initializePool(1000 ether, 1000 ether);
+        uint amountIn = 50 ether;
 
-        (,uint amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), 50 ether); 
 
+        (,uint amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), amountIn); 
+        // dy = (Y*dx) / (X + dx)  
+        // (1000 * 50) / (1000 + 50) = 47.619047619047619047
+        // fee: 47.619047619047619047 - (47.619047619047619047 * .003) = 47.476190476190476189
+        assertEq(47476190476190476189, amountOut);
         
 
 
     }
-    function testAmountIn() public {
-        schrute_Stanley.initializePool(2000 ether, 2000 ether);
-        (,uint amountIn) = schrute_Stanley.getTokenAndAmountIn(address(stanleyNickels), 1000 ether);
 
+    function testAmountIn() public {
+        schrute_Stanley.initializePool(2000 ether, 300 ether);
+        uint amountOut = 15 ether;
+        (,uint amountIn) = schrute_Stanley.getTokenAndAmountIn(address(stanleyNickels), amountOut);
+        // dx = (X*dy) / (Y - dy)
+        // (2000 * 15) / (300 - 15) = 105.263157894736842105
+        // fee: 105.263157894736842105 + (105.263157894736842105 * .003) = 105.578947368421052631
+        assertEq(105578947368421052631, amountIn);
 
     }
 
@@ -225,8 +235,8 @@ contract NolanSwapTest is Test {
         schrute_Stanley.initializePool(1000 ether, 1000 ether); 
 
         // get the balance of this each token for this contract before the swap    
-        uint stanleyBalance = stanleyNickels.balanceOf(address(this));
-        uint schruteBalance = schruteBucks.balanceOf(address(this));
+        uint stanleyBalanceBefore = stanleyNickels.balanceOf(address(this));
+        uint schruteBalanceBefore = schruteBucks.balanceOf(address(this));
     
         (,uint amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), swapAmountIn);
         console.log(amountOut);
@@ -236,6 +246,14 @@ contract NolanSwapTest is Test {
         schruteBucks.approve(address(schrute_Stanley), swapAmountIn);
         // swap
         schrute_Stanley.swapExactInWithSlippageProtection(targetAmountOut, swapAmountIn, address(schruteBucks), maxPercent); 
+        
+        // make sure correct amounts are swapped
+        uint stanleyBalanceAfter = stanleyNickels.balanceOf(address(this));
+        uint schruteBalanceAfter = schruteBucks.balanceOf(address(this));
+        assertEq(stanleyBalanceAfter, stanleyBalanceBefore + amountOut);
+        assertEq(schruteBalanceAfter, schruteBalanceBefore - swapAmountIn);    
+
+
 
         // lets try again with the same values
         (, amountOut) = schrute_Stanley.getTokenAndAmountOut(address(schruteBucks), swapAmountIn);
@@ -267,30 +285,39 @@ contract NolanSwapTest is Test {
         schrute_Stanley.initializePool(1000 ether, 1000 ether); 
 
         // get the balance of this each token for this contract before the swap    
-        uint stanleyBalance = stanleyNickels.balanceOf(address(this));
-        uint schruteBalance = schruteBucks.balanceOf(address(this));
+        uint stanleyBalanceBefore = stanleyNickels.balanceOf(address(this));
+        uint schruteBalanceBefore = schruteBucks.balanceOf(address(this));
     
-        (,uint amountOut) = schrute_Stanley.getTokenAndAmountIn(address(stanleyNickels), swapAmountOut);
-        console.log(amountOut);
+        (,uint amountIn) = schrute_Stanley.getTokenAndAmountIn(address(stanleyNickels), swapAmountOut);
+        console.log(amountIn);
         // amountOut == 47619047619047619047
         // worstPrice = 47500000000000000000
         // since amountOut is GREATER than the users worst acceptable price. this swap should work
-        schruteBucks.approve(address(schrute_Stanley), swapAmountOut);
+        schruteBucks.approve(address(schrute_Stanley), amountIn);
 
         // swap
-        schrute_Stanley.swapExactInWithSlippageProtection(targetAmountIn, swapAmountOut, address(stanleyNickels), maxPercent); 
+        schrute_Stanley.swapExactOutWithSlippageProtection(targetAmountIn, swapAmountOut, address(stanleyNickels), maxPercent); 
+
+        // make sure correct amounts are swapped
+        uint stanleyBalanceAfter = stanleyNickels.balanceOf(address(this));
+        uint schruteBalanceAfter = schruteBucks.balanceOf(address(this));
+        assertEq(stanleyBalanceAfter, stanleyBalanceBefore + swapAmountOut);
+        assertEq(schruteBalanceAfter, schruteBalanceBefore - amountIn);    
+
+
+
 
         // lets try again with the same values
-        (, amountOut) = schrute_Stanley.getTokenAndAmountOut(address(stanleyNickels), swapAmountOut);
+        (, amountIn) = schrute_Stanley.getTokenAndAmountOut(address(stanleyNickels), swapAmountOut);
         // amountOut = 43290043290043290043
         // worstPrice = 47500000000000000000
         // since amountOut is now LESS than the users worst acceptable price. this swap should not work
         // schruteBalance = schruteBucks.balanceOf(address(this));
 
-        schruteBucks.approve(address(schrute_Stanley), swapAmountOut);
+        schruteBucks.approve(address(schrute_Stanley), amountIn);
 
         vm.expectRevert(bytes("bad price"));
-        schrute_Stanley.swapExactInWithSlippageProtection(targetAmountIn, swapAmountOut, address(stanleyNickels), maxPercent);
+        schrute_Stanley.swapExactOutWithSlippageProtection(targetAmountIn, swapAmountOut, address(stanleyNickels), maxPercent);
 
     }
 
